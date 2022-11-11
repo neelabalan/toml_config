@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "toml_config"
+version = "0.1.0"
+description = ""
+authors = ["neelabalan <neelabalan.n@outlook.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+toml = "0.10.2"
+pydantic = "1.10.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "7.2.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.blue]
+line_length = 119
+
+[tool.pylint]
+max-line-length = 119
+disable = ["wrong-import-position", "missing-moudle-docstring", "two-few-public-method"]
+good-names=["df", "id", "ex"]
+
+[tool.isort]
+force_single_line = true
+profile = "black"
