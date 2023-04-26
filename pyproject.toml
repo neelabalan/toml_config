@@ -1,16 +1,18 @@
 [tool.poetry]
 name = "toml_config"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["neelabalan <neelabalan.n@outlook.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 toml = "0.10.2"
-pydantic = "1.10.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "7.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pydantic = "1.10.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

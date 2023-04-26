@@ -1,57 +1,50 @@
-import datetime
-from typing import Any
-from typing import Dict
-from typing import List
-
 import pytest
+import toml
+import toml_config
+from pathlib import Path
 from pydantic import BaseModel
 
-import toml_config
 
+class TestConfig:
+    @classmethod
+    def setup_class(cls):
+        cls.cfg_path = "tests/test_conf.toml"
+        cls.data = {"server": {"host": "127.0.0.1", "port": 8080}}
+        with open("tests/test_conf.toml", "w") as file:
+            toml.dump(cls.data, file)
+        cls.cfg = toml_config.load(cls.cfg_path)
 
-class FirstStep(BaseModel):
-    a: int
-    b: int
+    @classmethod
+    def teardown_class(cls):
+        Path(cls.cfg_path).unlink()
 
+    def test_valid_attribute_access(self):
+        assert self.cfg.server.host == self.data["server"]["host"]
+        assert self.cfg.server.port == self.data["server"]["port"]
 
-class MiscTypes(BaseModel):
-    test_list: List[int]
-    test_dict: Dict
-    test_date: datetime.date
+    def test_invalid_attribute_access(self):
+        with pytest.raises(AttributeError):
+            self.cfg.key3
 
+    def test_valid_item_access(self):
+        assert self.cfg.server["host"] == self.data["server"]["host"]
+        assert self.cfg.server["port"] == self.data["server"]["port"]
 
-class Config(BaseModel):
-    first_step: FirstStep
-    second_step: Any
-    misc_types: MiscTypes
+    def test_invalid_item_access(self):
+        with pytest.raises(KeyError):
+            self.cfg["key3"]
 
+    def test_repr(self):
+        assert (
+            repr(self.cfg) == "config({'server': {'host': '127.0.0.1', 'port': 8080}})"
+        )
 
-@pytest.fixture
-def conf():
-    return toml_config.load("tests/test_conf.toml")
+    def test_validate(self):
+        class Server(BaseModel):
+            host: str
+            port: int
 
+        class Config(BaseModel):
+            server: Server
 
-def test_no_file_case():
-    with pytest.raises(FileNotFoundError):
-        toml_config.load("does_not_exists.toml")
-
-
-def test_file_exists(conf):
-    assert conf
-
-
-def test_empty_config():
-    with pytest.raises(ValueError):
-        toml_config.load("tests/empty.toml")
-
-
-def test_attributes(conf):
-    assert conf.first_step.a == 1
-    assert conf.second_step.d == 4
-    assert isinstance(conf.misc_types.test_list, list)
-    assert isinstance(conf.misc_types.test_date, datetime.date)
-    assert conf.misc_types.test_dict.key == "value"
-
-
-def test_validation():
-    assert toml_config.load("tests/test_conf.toml", model=Config)
+        assert self.cfg.validate(Config)

@@ -1,50 +1,46 @@
-from pathlib import Path
+from __future__ import annotations
 from typing import Dict
-from typing import Union
+from typing import Type
+from typing import TypeVar
+from typing import Any
 
 import toml
-from pydantic import BaseModel
+
+M = TypeVar("M")
 
 
-class _config:
-    def __init__(self, obj: Dict):
-        self.__dict = obj
-        for key, value in obj.items():
-            if isinstance(key, (list, tuple)):
-                setattr(
-                    self,
-                    key,
-                    [_config(x) if isinstance(x, dict) else x for x in value],
-                )
-            else:
-                setattr(
-                    self,
-                    key,
-                    _config(value) if isinstance(value, dict) else value,
-                )
+class config:
+    def __init__(self, toml_config: Dict[str, Any]):
+        self.toml_config = toml_config
 
-    def __dict__(self):
-        return self.__dict
+    def __getattr__(self, attr: str) -> str | int | float | config:
+        if attr not in self.toml_config:
+            raise AttributeError(f"Attribute {attr} not found in config")
+        value = self.toml_config[attr]
+        if isinstance(value, dict):
+            return config(value)
+        return value
+
+    def __getitem__(self, key: str) -> str | int | float | config:
+        if key not in self.toml_config:
+            raise KeyError(f"Key {key} not found in config")
+        value = self.toml_config[key]
+        if isinstance(value, dict):
+            return config(self.toml_config[key])
+        return value
+
+    def __repr__(self):
+        return f"config({self.toml_config})"
+
+    def __str__(self):
+        return str(self.toml_config)
+
+    def validate(self, model: Type[M]):
+        """Pydantic model to be passed for validation"""
+        return model(**self.toml_config)
 
 
-def __file_exists(path: Union[str, Path]):
-    return (
-        isinstance(path, str)
-        and not Path(path).exists()
-        or (isinstance(path, Path) and not path.exists())
-    )
-
-
-def load(path: Union[str, Path], model: BaseModel = None):
-    obj = None
-    if __file_exists(path):
-        raise FileNotFoundError(f"Config file not found at {path}")
-    with open(path, "r") as file:
-        # Should raise toml.TomlDecodeError
-        obj = toml.load(file)
-    if not obj:
-        raise ValueError("Config file is empty")
-    if model and isinstance(model, BaseModel):
-        # validate here
-        model(**obj)
-    return _config(obj)
+def load(config_file_path: str) -> config | None:
+    with open(config_file_path, "r") as f:
+        toml_config = toml.load(f)
+    return config(toml_config)
